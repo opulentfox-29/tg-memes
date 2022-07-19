@@ -1,0 +1,6 @@
+.git/
+data/
+__pycache__/
+.idea/
+venv/
+TODO.txt

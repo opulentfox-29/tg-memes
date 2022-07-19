@@ -1,0 +1,5 @@
+beautifulsoup4==4.10.0
+pyTelegramBotAPI==4.3.1
+requests==2.25.1
+youtube_dl==2021.12.17
+colorama==0.4.4
