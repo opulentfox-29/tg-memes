@@ -2,7 +2,7 @@ import time
 
 import youtube_dl
 import telebot
-from telebot.types import InputMediaPhoto, InputMediaVideo
+from telebot.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument
 
 import logger as log
 from exceptions import *
@@ -73,7 +73,9 @@ class TG:
             if media_bytes_dict[media_bytes] == 'photo':
                 self._append_media_photo(media_group, media_bytes, first_media, text)
                 first_media = False
-            
+            elif media_bytes_dict[media_bytes] == 'gif':
+                self._append_media_gif(media_group, media_bytes, first_media, text)
+                first_media = False
             else:
                 video_num = media_bytes_dict[media_bytes]
                 try:
@@ -93,13 +95,19 @@ class TG:
         video_num = 0
         media_bytes_dict = {}
         for media_content in media_contents:
-            if type(media_content) == bytes:
-                media_bytes_dict[media_content] = 'photo'
-            elif "video" in media_content:
+            if media_contents[media_content] == 'photo':
+                media_bytes_dict[media_content] = media_contents[media_content]
+            elif media_contents[media_content] == 'gif':
+                media_bytes_dict[media_content] = media_contents[media_content]
+            elif media_contents[media_content] == 'video':
+                extract_url = extractor_url(media_content)
+                if not extract_url:
+                    extract_url = media_content
                 video_num += 1
-                self._download_videos(media_content, video_num)
+                self._download_videos(extract_url, video_num)
                 media_bytes_dict[media_content] = video_num
-            else: 
+            else:
+                print(media_content, media_contents[media_content])
                 log.error(f"[ERROR] - не видео и не фото {self.link_post}")
                 self.err_text = f"{self.err_text} не видео и не фото\n"
         self.media_bytes_dict = media_bytes_dict
@@ -108,10 +116,18 @@ class TG:
                             first_media: bool, text: str) -> None:
         """Добавление фото к медиа группе."""
         if first_media:
-            media_group.append(InputMediaPhoto(photo, text))
+            media_group.append(InputMediaPhoto(photo, caption=text))
         else:
             media_group.append(InputMediaPhoto(photo))
-        
+
+    def _append_media_gif(self, media_group: list[telebot, ...], gif: bin,
+                          first_media: bool, text: str) -> None:
+        """Добавление гифки к медиа группе."""
+        if first_media:
+            media_group.append(InputMediaDocument(gif, caption=text))
+        else:
+            media_group.append(InputMediaDocument(gif))
+
     def _append_media_video(self, media_group: list[telebot, ...], video_file: bin,
                             first_media: bool, text: str, video_num: int) -> None:
         """Добавление видео к медиа группе."""
@@ -138,12 +154,8 @@ class TG:
                 )
             )
         
-    def _download_videos(self, video_url: str, video_num: int) -> None:
+    def _download_videos(self, extract_url: str, video_num: int) -> None:
         """Скачивание видео."""
-        extract_url = extractor_url(video_url)
-        if not extract_url:
-            extract_url = video_url
-        
         ydl_opts = {
             'outtmpl': f'data/temp/vid{video_num}.mp4', 
             'max-filesize': '47MiB',

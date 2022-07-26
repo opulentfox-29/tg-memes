@@ -57,7 +57,8 @@ class Vk:
         self.link_post = 'https://vk.com' + item.find('a', class_='post_link').get('href')
         item_content = item.find("div", class_="wall_text")
 
-        photos = item_content.find_all('a', {"aria-label": "фотография"})
+        photos = item_content.find_all('a', {'aria-label': 'фотография'})
+        gifs = item_content.find_all('a', {'class': 'page_doc_photo_href'})
         videos = item_content.find_all('div', class_="page_post_video_play_inline")
 
         post_text = self._get_text(item_content)
@@ -81,7 +82,7 @@ class Vk:
 
         self.post_text = post_text
 
-        media_urls = self._media_urls_group(photos, videos)
+        media_urls = self._media_urls_group(photos, gifs, videos)
 
         return self.post_text, media_urls
 
@@ -134,10 +135,10 @@ class Vk:
 
         return text
 
-    def _media_urls_group(self, photos: list[BeautifulSoup, ...],
-                          videos: list[BeautifulSoup, ...]) -> list[str or bytes, ...]:
+    def _media_urls_group(self, photos: list[BeautifulSoup, ...], gifs: list[BeautifulSoup, ...],
+                          videos: list[BeautifulSoup, ...]) -> dict[str or bytes, str, ...]:
         """Создание списка медиа из поста."""
-        media = []
+        media = {}
 
         for photo in photos:
             photo = photo.get('onclick')
@@ -152,14 +153,21 @@ class Vk:
             if len(z) > 1:
                 photo = z
             photo_url = photo[1].split('","')[0].replace('\\', '')
-            photo = requests.get(photo_url).content
 
-            media.append(photo)
+            photo = requests.get(photo_url).content
+            media[photo] = 'photo'
+
+        for gif in gifs:
+            gif_vk_url = "https://vk.com" + gif.get('href')
+            gif_page = requests.get(gif_vk_url)
+            gif_page = BeautifulSoup(gif_page.text, 'html.parser')
+            gif_url = gif_page.find('img').get('src')
+            media[gif_url] = 'gif'
 
         for video in videos:
             video_url = 'https://vk.com' + video.parent.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
 
-            media.append(video_url)
+            media[video_url] = 'video'
 
         return media
