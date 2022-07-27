@@ -1,5 +1,6 @@
 dont_use_proxy = True  # не использовать прокси
 cycle = False  # должен ли бот работать циклично.
+chunk_size = 1024
 
 try:
     with open("data/session", "r", encoding="utf-8") as session:

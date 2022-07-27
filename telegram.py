@@ -1,6 +1,7 @@
 import time
+import requests
+import os
 
-import youtube_dl
 import telebot
 from telebot.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument
 
@@ -10,13 +11,14 @@ from extractors import extractor_url, extractor_info
 
 
 class TG:
-    def __init__(self, token, chat_id, text, link_post, media_urls):
+    def __init__(self, token, chat_id, text, link_post, media_urls, chunk_size):
         self.bot = telebot.TeleBot(token)
         self.chat_id = chat_id
         self.text = text
         self.link_post = link_post
         self.media_urls = media_urls
         self.err_text = ''
+        self.chunk_size = chunk_size
     
     def send_post(self) -> None:
         """Отправка поста в тг."""
@@ -156,26 +158,49 @@ class TG:
         
     def _download_videos(self, extract_url: str, video_num: int) -> None:
         """Скачивание видео."""
-        ydl_opts = {
-            'outtmpl': f'data/temp/vid{video_num}.mp4', 
-            'max-filesize': '47MiB',
-            "quiet": True,  # выключить встроенные логи
-            "progress_hooks": [log.log_download_video]  # свои логи
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                          'Chrome/103.0.0.0 Safari/537.36'
         }
-        
         try:
-            with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-                ydl.extract_info(extract_url, download=True)
-                
-        except YtdlTotalBytesException as ex:
-            self.err_text = f"{self.err_text}YtdlTotalBytesException {ex}\n"
-        except KeyboardInterrupt as ex:
+            chunk_size = self.chunk_size
+            with requests.get(extract_url, headers=headers, stream=True) as vid_req:
+                vid_len_bytes = int(vid_req.headers['Content-Length'])
+                vid_len = round(vid_len_bytes / 1024 / 1024, 1)
+                if vid_len_bytes >= 50 * 1024 * 1024:
+                    raise TooLargeVideo(vid_len)
+                download_bytes = 0
+                with open(f'data/temp/vid{video_num}.mp4', 'wb') as video_file:
+                    for chunk in vid_req.iter_content(chunk_size=chunk_size):
+                        download_bytes += chunk_size
+                        log.download_video(download_bytes, vid_len)
+                        video_file.write(chunk)
+                log.download_video(download_bytes, vid_len, finished=True)
+            return
+
+        except TooLargeVideo as ex:
+            log.warning(ex.text)
+            self.err_text = f"{self.err_text}{ex.text}\n"
+        except KeyError as ex:
+            if "www.youtube.com" in extract_url:
+                self.text = f"{self.text}\n{extract_url}"
+                log.warning(f"[download video] Видео с ютуба не скачиваются.")
+            else:
+                self.err_text = f"{self.err_text}KeyError: {ex}\n"
+                log.error(extract_url)
+                log.error(f"[download video] KeyError: {ex}")
+        except KeyboardInterrupt:
             self.err_text = f"{self.err_text}SKIP DOWNLOAD VIDEO\n"
-            log.warning(f"SKIP DOWNLOAD VIDEO {ex}")
+            log.warning(f"\n[download video] SKIP DOWNLOAD VIDEO")
         except Exception as ex:
             self.err_text = f"{self.err_text}{ex}\n"
             log.error(f"FAILED DOWNLOAD VIDEO {ex}")
-        
+
+        try:
+            os.remove(f"data/temp/vid{video_num}.mp4")
+        except FileNotFoundError:
+            pass
+
     def _media_close(self) -> None:
         """Закрывает медиа файлы."""
         for media_file in self.opened_media:

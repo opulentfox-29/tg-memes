@@ -43,7 +43,7 @@ def main():
 
             text, media_urls = vk.item_parse(item)
 
-            tg = TG(settings.TOKEN, settings.chat_id, text, vk.link_post, media_urls)
+            tg = TG(settings.TOKEN, settings.chat_id, text, vk.link_post, media_urls, settings.chunk_size)
 
             tg.send_post()
 

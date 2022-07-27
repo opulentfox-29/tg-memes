@@ -18,14 +18,10 @@ def error(text: str) -> None:
     print(Fore.RED + text + Style.RESET_ALL)
 
 
-def log_download_video(log_vid: dict[...]) -> None:
+def download_video(download_bytes: int, vid_len: float, finished: bool = False):
     """Анимация скачивания видео."""
-    if log_vid['status'] == 'downloading':
-        try:
-            print(f"\r[download video] {log_vid['_percent_str']} of x ETA {log_vid['_eta_str']}   ", end='')
-        except KeyError:
-            pass
-    if log_vid['status'] == 'finished' and '_elapsed_str' in log_vid:
-        print(f"\r[download video] {log_vid['_total_bytes_str']} finished in {log_vid['_elapsed_str']}     ")
-    if '_elapsed_str' not in log_vid and log_vid['status'] == 'finished':
-        print("[download video] File found in folder")
+    download_mb = round(download_bytes / 1024 / 1024, 1)
+    if finished:
+        print(f'\r[download video] {download_mb} MB. finished.{" "*10}')
+    else:
+        print(f'\r[download video] {download_mb} MB. out of {vid_len} MB.', end='')
