@@ -22,20 +22,20 @@ class DataBase:
         for temp_file in temp_files:
             os.remove(f"data/temp/{temp_file}")
         
-    def _check_db(self) -> None:
-        """Проверяет есть ли база данных, создаёт, если нет."""
+    def check_db(self) -> bool:
+        """Проверяет есть ли база данных, создаёт и выводит True, если нет, иначе False."""
         if not os.path.isfile(f"data/data-base/{self.db_name}"): 
-            with open("data/data-base/" + self.db_name, "w", encoding="utf-8"):
-                pass
+            open("data/data-base/" + self.db_name, "w", encoding="utf-8")
+            return True
+        return False
             
     def get_db(self) -> list[str, ...]:
         """Достаёт из базы данных все id."""
-        self._check_db()
         self.db = []
         with open('data/data-base/' + self.db_name, "r", encoding="utf-8") as file:
             for line in file:
                 self.db.append(line[:-1])
-        return self.db        
+        return self.db
         
     def set_db(self, post_id: str) -> None:
         """Записывает id в базу данных."""

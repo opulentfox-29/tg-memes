@@ -21,6 +21,7 @@ def main():
 
         vk = vkontakte.Vk()
         db = database.DataBase(db_name)
+        db_created = db.check_db()
 
         items = vk.parse_main_page(url)
 
@@ -30,7 +31,7 @@ def main():
 
             db.check_dir()
 
-            if vk.skip(item):
+            if vk.skip(item, db_created):
                 continue  # скип закрепа, рекламы, источника
 
             ids_in_db = db.get_db()

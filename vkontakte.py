@@ -86,10 +86,13 @@ class Vk:
 
         return self.post_text, media_urls
 
-    def skip(self, item: BeautifulSoup) -> bool:
+    def skip(self, item: BeautifulSoup, db_created: bool) -> bool:
         """Если обнаружена реклама, закреплённый пост или ссылка на источник, то возвращает True, """ \
             """иначе False."""
-        fixed = item.parent.find('div', class_='post_fixed')
+        if db_created:
+            fixed = None
+        else:
+            fixed = item.parent.find('div', class_='post_fixed')
         ads = item.find('div', class_='wall_marked_as_ads')
         source = item.find('a', class_='Post__copyrightLink')
 
