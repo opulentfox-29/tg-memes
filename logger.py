@@ -22,6 +22,6 @@ def download_video(download_bytes: int, vid_len: float, finished: bool = False):
     """Анимация скачивания видео."""
     download_mb = round(download_bytes / 1024 / 1024, 1)
     if finished:
-        print(f'\r[download video] {download_mb} MB. finished.{" "*10}')
+        print(f'\r[download video] {download_mb} MB finished.{" "*10}')
     else:
-        print(f'\r[download video] {download_mb} MB. out of {vid_len} MB.', end='')
+        print(f'\r[download video] {download_mb} MB out of {vid_len} MB.', end='')

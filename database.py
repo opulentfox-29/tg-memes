@@ -5,8 +5,6 @@ if not os.path.isdir("data"):
     os.mkdir("data")
 if not os.path.isdir("data/data-base"):
     os.mkdir("data/data-base")
-if not os.path.isdir("data/temp"):
-    os.mkdir("data/temp")
 if not os.path.isfile(f"data/links.txt"):
     open("data/links.txt", "w", encoding="utf-8").close()
 
@@ -15,15 +13,9 @@ class DataBase:
     def __init__(self, db_name):
         self.db_name = db_name
         self.db = []
-    
-    def check_dir(self) -> None:
-        """Очищает временные файлы."""
-        temp_files = os.listdir("data/temp")
-        for temp_file in temp_files:
-            os.remove(f"data/temp/{temp_file}")
         
     def check_db(self) -> bool:
-        """Проверяет есть ли база данных, создаёт и выводит True, если нет, иначе False."""
+        """Если база данных существует, то выводит False, иначе создаёт и выводит True."""
         if not os.path.isfile(f"data/data-base/{self.db_name}"): 
             open("data/data-base/" + self.db_name, "w", encoding="utf-8")
             return True

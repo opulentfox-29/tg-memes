@@ -1,3 +1,3 @@
 class TooLargeVideo(Exception):
     def __init__(self, size: float):
-        self.text = f"Видео слишком большое ({size} MB)."
+        self.text = f"[TG ERROR] Видео слишком большое ({size} MB)."

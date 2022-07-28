@@ -19,7 +19,7 @@ def main():
 
         db_name = url.split("/")[3]
 
-        vk = vkontakte.Vk()
+        vk = vkontakte.Vk(settings.chunk_size)
         db = database.DataBase(db_name)
         db_created = db.check_db()
 
@@ -28,8 +28,6 @@ def main():
         new_items = False
 
         for item in items:
-
-            db.check_dir()
 
             if vk.skip(item, db_created):
                 continue  # скип закрепа, рекламы, источника
@@ -41,9 +39,9 @@ def main():
                 continue  # скип постов, которые уже в базе
             new_items = True
 
-            text, media_urls = vk.item_parse(item)
+            vk.item_parse(item)
 
-            tg = TG(settings.TOKEN, settings.chat_id, text, vk.link_post, media_urls, settings.chunk_size)
+            tg = TG(settings.TOKEN, settings.chat_id, vk)
 
             tg.send_post()
 

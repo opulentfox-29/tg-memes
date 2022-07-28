@@ -5,7 +5,7 @@ chunk_size = 1024
 try:
     with open("data/session", "r", encoding="utf-8") as session:
         TOKEN, chat_id = session.read().split('\n')
-except Exception:
+except (FileNotFoundError, ValueError):
     TOKEN = input("Enter your tg token: ")
     chat_id = input("Enter your chat id: ")
     with open("data/session", "w", encoding="utf-8") as session:

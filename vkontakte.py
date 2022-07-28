@@ -1,50 +1,43 @@
+import os
 import requests
 from bs4 import BeautifulSoup
 
 import logger as log
+import exceptions
+from extractors import extractor_url, extractor_info
+
+headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
+                  'Chrome/103.0.0.0 Safari/537.36'
+}
 
 
 class Vk:
-    def __init__(self):
+    def __init__(self, chunk_size):
+        self.chunk_size = chunk_size
         self.author = None
         self.link_post = None
         self.post_text = None
+        self.err_text = ''
+        self.media_bytes_dict = {}
 
     def parse_main_page(self, url: str) -> tuple[BeautifulSoup, ...]:
         """Возвращает кортеж постов."""
-        assert isinstance(url, str), f'{url} - ссылка должна быть строкой'
-        self._get_page(url)
-        # self._load_page("main")
-        items = tuple(reversed(self.soup.find_all('div', class_='post')))
+        soup = self._get_page(url)
+        items = tuple(reversed(soup.find_all('div', class_='post')))
         assert len(items) == 10, f"{len(items)=}"
-        self.author = self.soup.find('h1', class_='page_name').text
-        assert self.author, "no author"
+        self.author = soup.find('h1', class_='page_name').text
         return items
 
-    def _get_page(self, url: str) -> None:
+    def _get_page(self, url: str) -> BeautifulSoup:
         """Возвращает soup страницы."""
         try:
-            headers = {
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                              "(KHTML, like Gecko) Chrome/99.0.4844.51 Safari/537.36"
-            }
             request = requests.get(url, headers=headers)
         except requests.exceptions.ConnectionError as err:
             log.error(f"[ERROR] невозможно открыть ссылку {err}")
             raise requests.exceptions.ConnectionError(err)
         soup = BeautifulSoup(request.text, 'html.parser')
-        self.soup = soup
-
-    def save_page(self, name: str) -> None:
-        """Сохранение страницы в файле."""
-        with open(f"{name}.html", "w", encoding="utf-8") as file:
-            file.write(str(self.soup))
-
-    def _load_page(self, name: str) -> None:
-        """Загружает, предварительно, скачанную страницу."""
-        with open(f"{name}.html", 'r', encoding="utf-8") as file:
-            soup = BeautifulSoup(file.read(), 'html.parser')
-        self.soup = soup
+        return soup
 
     def get_post_id(self, item: BeautifulSoup) -> str:
         """Возвращает id поста."""
@@ -63,16 +56,16 @@ class Vk:
 
         post_text = self._get_text(item_content)
 
-        copy_quote = item_content.find('div', class_='copy_quote')
+        copy_quote = item_content.find('div', class_='copy_quote')  # Репост
         if copy_quote:
             author_copy = copy_quote.find('a', class_='copy_author').text
             post_text = f"{post_text}\nРЕПОСТ: {author_copy}\n\n{self._get_text(copy_quote)}"
 
-        article = item_content.find('a', class_='article_snippet')
+        article = item_content.find('a', class_='article_snippet')  # Статья
         if article:
             post_text = self._get_article(article)
 
-        voting = item_content.find("div", class_="post_media_voting")
+        voting = item_content.find("div", class_="post_media_voting")  # Голосование
         if voting:
             post_text = post_text + self._get_voting(item_content, post_text)
 
@@ -82,9 +75,9 @@ class Vk:
 
         self.post_text = post_text
 
-        media_urls = self._media_urls_group(photos, gifs, videos)
+        self.media_bytes_dict = self._create_media_bytes_dict(photos, gifs, videos)
 
-        return self.post_text, media_urls
+        return self.post_text, self.media_bytes_dict
 
     def skip(self, item: BeautifulSoup, db_created: bool) -> bool:
         """Если обнаружена реклама, закреплённый пост или ссылка на источник, то возвращает True, """ \
@@ -100,7 +93,7 @@ class Vk:
             return True
         return False
 
-    def _get_text(self, item_content: BeautifulSoup) -> str:
+    def _get_text(self, item_content: any) -> str:
         """Извлечение текста из поста."""
         text_bs4 = item_content.find('div', class_='wall_post_text')
 
@@ -120,7 +113,7 @@ class Vk:
 
         return post_text
 
-    def _get_article(self, article: BeautifulSoup) -> str:
+    def _get_article(self, article: any) -> str:
         """Получение статьи."""
         article_href = 'https://vk.com' + article.get('href')
         article_title = article.find('div', class_='article_snippet__title').text
@@ -138,8 +131,9 @@ class Vk:
 
         return text
 
-    def _media_urls_group(self, photos: list[BeautifulSoup, ...], gifs: list[BeautifulSoup, ...],
-                          videos: list[BeautifulSoup, ...]) -> dict[str or bytes, str, ...]:
+    def _create_media_bytes_dict(self, photos: list[BeautifulSoup, ...], gifs: list[BeautifulSoup, ...],
+                                 videos: list[BeautifulSoup, ...]) -> dict[bytes,
+                                                                           dict[str, str, str, dict[str, str]], ...]:
         """Создание списка медиа из поста."""
         media = {}
 
@@ -158,19 +152,66 @@ class Vk:
             photo_url = photo[1].split('","')[0].replace('\\', '')
 
             photo = requests.get(photo_url).content
-            media[photo] = 'photo'
+            media[photo] = {'type': 'photo'}
 
         for gif in gifs:
             gif_vk_url = "https://vk.com" + gif.get('href')
             gif_page = requests.get(gif_vk_url)
             gif_page = BeautifulSoup(gif_page.text, 'html.parser')
             gif_url = gif_page.find('img').get('src')
-            media[gif_url] = 'gif'
+            gif_bin = requests.get(gif_url).content
+            media[gif_bin] = {'type': 'gif'}
 
         for video in videos:
             video_url = 'https://vk.com' + video.parent.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
+            extract_url, duration = extractor_url(video_url)
 
-            media[video_url] = 'video'
+            download_data = self._download_video(extract_url)
+            if download_data:
+                video_bytes, width, height = download_data
+                media[video_bytes] = {'type': 'video', 'data': {'duration': duration, 'width': width, 'height': height}}
 
         return media
+
+    def _download_video(self, extract_url: str) -> bytes or None:
+        try:
+            chunk_size = self.chunk_size
+            with requests.get(extract_url, headers=headers, stream=True) as vid_req:
+                vid_len_bytes = int(vid_req.headers['Content-Length'])
+                vid_len = round(vid_len_bytes / 1024 / 1024, 1)
+                if vid_len_bytes >= 50 * 1024 * 1024:
+                    raise exceptions.TooLargeVideo(vid_len)
+                download_bytes = 0
+                chunks = []
+                for chunk in vid_req.iter_content(chunk_size=chunk_size):
+                    download_bytes += chunk_size
+                    log.download_video(download_bytes, vid_len)
+                    chunks.append(chunk)
+                video_bytes = b''.join(chunks)
+                log.download_video(download_bytes, vid_len, finished=True)
+            with open('data/temp_vid.mp4', 'wb') as f:
+                f.write(video_bytes)
+            width, height = extractor_info()
+            return video_bytes, width, height
+
+        except exceptions.TooLargeVideo as ex:
+            log.warning(ex.text)
+            self.err_text = f"{self.err_text}{ex.text}\n"
+        except KeyError as ex:
+            if "www.youtube.com" in extract_url:
+                self.post_text = f"{self.post_text}\n{extract_url}"
+                log.warning(f"[download video] Видео с youtube не скачиваются.")
+            else:
+                self.err_text = f"{self.err_text}KeyError: {ex}\n"
+                log.error(extract_url)
+                log.error(f"[download video] KeyError: {ex}")
+        except KeyboardInterrupt:
+            self.err_text = f"{self.err_text}SKIP DOWNLOAD VIDEO\n"
+            log.warning(f"\n[download video] SKIP DOWNLOAD VIDEO")
+        except Exception as ex:
+            self.err_text = f"{self.err_text}{ex}\n"
+            log.error(f"FAILED DOWNLOAD VIDEO {ex}")
+        finally:
+            if os.path.isfile(f"data/temp_vid.mp4"):
+                os.remove("data/temp_vid.mp4")
