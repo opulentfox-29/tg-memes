@@ -7,8 +7,8 @@ import exceptions
 from extractors import extractor_url, extractor_info
 
 headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '
-                  'Chrome/103.0.0.0 Safari/537.36'
+    'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+                  '(KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36'
 }
 
 
@@ -138,18 +138,7 @@ class Vk:
         media = {}
 
         for photo in photos:
-            photo = photo.get('onclick')
-            x = photo.split('"x":"')
-            y = photo.split('"y":"')
-            z = photo.split('"z":"')
-
-            if len(x) > 1:
-                photo = x
-            if len(y) > 1:
-                photo = y
-            if len(z) > 1:
-                photo = z
-            photo_url = photo[1].split('","')[0].replace('\\', '')
+            photo_url = photo.get('style').split("url(")[1][:-2]
 
             photo = requests.get(photo_url).content
             media[photo] = {'type': 'photo'}
