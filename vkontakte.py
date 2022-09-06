@@ -51,6 +51,10 @@ class Vk:
         item_content = item.find("div", class_="wall_text")
 
         photos = item_content.find_all('a', {'aria-label': 'фотография'})
+        wall_id = None
+        if photos:
+            wall_id = item.find('a', class_='post_link').get('href').split('/')[1]
+
         gifs = item_content.find_all('a', {'class': 'page_doc_photo_href'})
         videos = item_content.find_all('div', class_="page_post_video_play_inline")
 
@@ -75,7 +79,7 @@ class Vk:
 
         self.post_text = post_text
 
-        self.media_bytes_dict = self._create_media_bytes_dict(photos, gifs, videos)
+        self.media_bytes_dict = self._create_media_bytes_dict(wall_id, gifs, videos)
 
         return self.post_text, self.media_bytes_dict
 
@@ -131,17 +135,29 @@ class Vk:
 
         return text
 
-    def _create_media_bytes_dict(self, photos: list[BeautifulSoup, ...], gifs: list[BeautifulSoup, ...],
+    def _create_media_bytes_dict(self, wall_id: str, gifs: list[BeautifulSoup, ...],
                                  videos: list[BeautifulSoup, ...]) -> dict[bytes,
                                                                            dict[str, str, str, dict[str, str]], ...]:
         """Создание списка медиа из поста."""
         media = {}
 
-        for photo in photos:
-            photo_url = photo.get('style').split("url(")[1][:-2]
+        if wall_id:
+            headers = {
+                'x-requested-with': 'XMLHttpRequest'
+            }
 
-            photo = requests.get(photo_url).content
-            media[photo] = {'type': 'photo'}
+            data = {
+                'al': '1',
+                'list': wall_id
+            }
+
+            photos = requests.post('https://vk.com/al_photos.php?act=show', headers=headers, data=data)
+            photos = photos.json()['payload'][1][3]
+
+            for photo in photos:
+                photo_url = photo.get('w_src') or photo.get('z_src') or photo.get('y_src') or photo.get('x_src')
+                photo = requests.get(photo_url).content
+                media[photo] = {'type': 'photo'}
 
         for gif in gifs:
             gif_vk_url = "https://vk.com" + gif.get('href')
