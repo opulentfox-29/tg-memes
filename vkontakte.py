@@ -7,6 +7,7 @@ import exceptions
 from extractors import extractor_url, extractor_info
 
 headers = {
+    'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36'
 }
@@ -170,8 +171,11 @@ class Vk:
         for video in videos:
             video_url = 'https://vk.com' + video.parent.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
-            extract_url, duration = extractor_url(video_url)
-
+            try:
+                extract_url, duration = extractor_url(video_url)
+            except Exception as ex_err:
+                log.error(f"extractor_url - {ex_err}")
+                continue
             download_data = self._download_video(extract_url)
             if download_data:
                 video_bytes, width, height = download_data
