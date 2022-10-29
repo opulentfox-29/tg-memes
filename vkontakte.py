@@ -51,7 +51,7 @@ class Vk:
         self.link_post = 'https://vk.com' + item.find('a', class_='post_link').get('href')
         item_content = item.find("div", class_="wall_text")
 
-        photos = item_content.find_all('a', {'aria-label': 'фотография'})
+        photos = item_content.find_all('a', class_='page_post_thumb_wrap')
         wall_id = None
         if photos:
             wall_id = item.find('a', class_='post_link').get('href').split('/')[1]

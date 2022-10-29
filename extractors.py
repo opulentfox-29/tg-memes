@@ -1,8 +1,6 @@
 import requests
 import subprocess
 
-import logger as log
-
 
 def extractor_url(url: str) -> tuple[str, str] or None:
     """Из ссылки на пост с видео, делает прямую ссылку на скачивание видео."""
@@ -28,46 +26,24 @@ def extractor_url(url: str) -> tuple[str, str] or None:
         'list': list_id,
         'video': video_id,
     }
-    url_video = None
 
-    try:
-        response = requests.post('https://vk.com/al_video.php', params=params, headers=headers, data=data)
-        payload_1 = response.json()['payload'][1]
+    response = requests.post('https://vk.com/al_video.php', params=params, headers=headers, data=data)
+    payload_1 = response.json()['payload'][1]
 
-        if 'video_yt_player' in payload_1[1]:
-            url_video = payload_1[1].split('src="')[1].split('"')[0]
-        
-        json_answer = payload_1[3]['player']['params'][0]
-
-        direct_mp4 = json_answer.get('direct_mp4')
-        url144 = json_answer.get('url144')
-        url240 = json_answer.get('url240')
-        url360 = json_answer.get('url360')
-        url480 = json_answer.get('url480')
-        url720 = json_answer.get('url720')
-        url1080 = json_answer.get('url1080')
-        
-        if direct_mp4:
-            url_video = direct_mp4
-        if url144:
-            url_video = url144
-        if url240:
-            url_video = url240
-        if url360:
-            url_video = url360
-        if url480:
-            url_video = url480
-        if url720:
-            url_video = url720
-        if url1080:
-            url_video = url1080
-
-        duration = json_answer.get('duration')
-
+    if payload_1[3]['player']['type'] == 'youtube':
+        url_video = payload_1[1].split('src="')[1].split('"')[0]
+        duration = payload_1[3]['mvData']['duration']
         return url_video, duration
-    except Exception as err:
-        log.error(str(err))
-        return None
+
+    json_answer = payload_1[3]['player']['params'][0]
+
+    qualities = ('url1080', 'url720', 'url480', 'url360', 'url240', 'url144', 'direct_mp4')
+
+    url_video = tuple(filter(bool, map(lambda x: json_answer.get(x), qualities)))[0]
+
+    duration = json_answer.get('duration')
+
+    return url_video, duration
 
 
 def extractor_info() -> tuple[str, str]:
