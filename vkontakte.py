@@ -169,7 +169,13 @@ class Vk:
             media[gif_bin] = {'type': 'gif'}
 
         for video in videos:
-            video_url = 'https://vk.com' + video.parent.get("href")
+            video = video.parent
+            video_restriction = video.find('div', class_='VideoRestriction__title')
+            if video_restriction:
+                log.warning(f"[get video] - {video_restriction.text}")
+                self.post_text = f"[get video] - Видео только для авторизированных.\n{self.post_text}\n{self.link_post}"
+                continue
+            video_url = 'https://vk.com' + video.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
             try:
                 extract_url, duration = extractor_url(video_url)

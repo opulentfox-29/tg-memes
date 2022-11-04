@@ -12,6 +12,7 @@ def extractor_url(url: str) -> tuple[str, str] or None:
         list_id = ''
     
     headers = {
+        'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                       '(KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36',
         'x-requested-with': 'XMLHttpRequest'
