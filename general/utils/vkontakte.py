@@ -2,9 +2,9 @@ import os
 import requests
 from bs4 import BeautifulSoup
 
-import logger as log
-import exceptions
-from extractors import extractor_url, extractor_info
+from . import logger as log
+from . import exceptions
+from .extractors import extractor_url, extractor_info
 
 headers = {
     'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
@@ -52,12 +52,18 @@ class Vk:
         item_content = item.find("div", class_="wall_text")
 
         photos = item_content.find_all('div', class_='MediaGrid__interactive')
+        photo = item_content.find('a', {'aria-label': 'фотография'})
+        if photo:
+            photos += photo
         wall_id = None
         if photos:
             wall_id = item.find('a', class_='post_link').get('href').split('/')[1]
 
         gifs = item_content.find_all('a', {'class': 'page_doc_photo_href'})
-        videos = item_content.find_all('div', class_="page_post_video_play_inline")
+        videos_collection = item_content.find_all('a', class_="MediaGrid__interactive")
+        one_video = item_content.find('div', class_="page_post_video_play_inline")
+        if one_video:
+            videos_collection += [one_video]
 
         post_text = self._get_text(item_content)
 
@@ -80,7 +86,7 @@ class Vk:
 
         self.post_text = post_text
 
-        self.media_bytes_dict = self._create_media_bytes_dict(wall_id, gifs, videos)
+        self.media_bytes_dict = self._create_media_bytes_dict(wall_id, gifs, videos_collection)
 
         return self.post_text, self.media_bytes_dict
 
@@ -137,7 +143,7 @@ class Vk:
         return text
 
     def _create_media_bytes_dict(self, wall_id: str, gifs: list[BeautifulSoup, ...],
-                                 videos: list[BeautifulSoup, ...]) -> dict[bytes,
+                                 videos_collection: list[BeautifulSoup, ...]) -> dict[bytes,
                                                                            dict[str, str, str, dict[str, str]], ...]:
         """Создание списка медиа из поста."""
         media = {}
@@ -168,13 +174,16 @@ class Vk:
             gif_bin = requests.get(gif_url).content
             media[gif_bin] = {'type': 'gif'}
 
-        for video in videos:
-            video = video.parent
-            video_restriction = video.find('div', class_='VideoRestriction__title')
-            if video_restriction:
-                log.warning(f"[get video] - {video_restriction.text}")
-                self.post_text = f"[get video] - Видео только для авторизированных.\n{self.post_text}\n{self.link_post}"
+        for video in videos_collection:
+            if video.get('aria-label') == 'фотография':
                 continue
+            if 'page_post_video_play_inline' in video.get('class'):
+                video = video.parent
+                video_restriction = video.find('div', class_='VideoRestriction__title')
+                if video_restriction:
+                    log.warning(f"[get video] - {video_restriction.text}")
+                    self.post_text = f"[get video] - Видео только для авторизированных.\n{self.post_text}\n{self.link_post}"
+                    continue
             video_url = 'https://vk.com' + video.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
             try:
@@ -205,7 +214,7 @@ class Vk:
                     chunks.append(chunk)
                 video_bytes = b''.join(chunks)
                 log.download_video(download_bytes, vid_len, finished=True)
-            with open('data/temp_vid.mp4', 'wb') as f:
+            with open('temp_vid.mp4', 'wb') as f:
                 f.write(video_bytes)
             width, height = extractor_info()
             return video_bytes, width, height
@@ -228,5 +237,5 @@ class Vk:
             self.err_text = f"{self.err_text}{ex}\n"
             log.error(f"FAILED DOWNLOAD VIDEO {ex}")
         finally:
-            if os.path.isfile(f"data/temp_vid.mp4"):
-                os.remove("data/temp_vid.mp4")
+            if os.path.isfile(f"temp_vid.mp4"):
+                os.remove("temp_vid.mp4")

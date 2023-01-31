@@ -1,0 +1,12 @@
+.wrapper {
+    display: flex;
+    flex-flow: column-reverse;
+    height: 80vh;
+    word-wrap: break-word;
+    background-color: #bdbdbd;
+    padding: 5px;
+}
+
+textarea {
+    resize: none;
+}

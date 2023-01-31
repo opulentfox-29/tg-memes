@@ -1,6 +1,9 @@
 .git/
-data/
-__pycache__/
 .idea/
+__pycache__/
 venv/
 TODO.txt
+db.sqlite3
+general/__pycache__/
+general/utils/__pycache__/
+memes/__pycache__/

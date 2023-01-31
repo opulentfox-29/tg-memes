@@ -50,7 +50,7 @@ def extractor_url(url: str) -> tuple[str, str] or None:
 def extractor_info() -> tuple[str, str]:
     """Извлекает ширину, высоту видео."""
     result = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries',
-                             'stream=height,width', '-of', 'csv=s=x:p=0', 'data/temp_vid.mp4'],
+                             'stream=height,width', '-of', 'csv=s=x:p=0', 'temp_vid.mp4'],
                             stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
 
     width, height = str(result.stdout).split("b'")[1].split("\\r")[0].split('x')

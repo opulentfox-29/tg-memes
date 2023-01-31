@@ -1,17 +1,13 @@
 import os
-import vkontakte
-from telegram import TG
-import database
-import logger as log
-import settings
+from . import vkontakte
+from .telegram import TG
+from . import database
+from . import logger as log
+from . import settings
 
 
-def main():
-
-    with open("data/links.txt", "r", encoding="utf-8") as file:
-        urls = [line.strip() for line in file]
-    if not urls:
-        log.error("Введите ссылки в файле 'data/links.txt'")
+def bot():
+    urls = database.DataBase('').get_urls()
 
     for url in urls:
         log.log("="*20)
@@ -41,7 +37,7 @@ def main():
 
             vk.item_parse(item)
 
-            tg = TG(settings.TOKEN, settings.chat_id, vk)
+            tg = TG(settings.token, settings.chat_id, vk)
 
             tg.send_post()
 
@@ -50,13 +46,17 @@ def main():
             log.log("no new items")
 
 
-if __name__ == "__main__":
+def main():
     if settings.dont_use_proxy:
         os.environ['no_proxy'] = '*'
 
     if settings.cycle:
         while True:
-            main()
+            bot()
     else:
-        main()
+        bot()
     input('Press enter to continue...')
+
+
+if __name__ == "__main__":
+    main()

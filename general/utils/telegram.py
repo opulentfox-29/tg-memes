@@ -3,7 +3,7 @@ import time
 import telebot
 from telebot.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument
 
-import logger as log
+from . import logger as log
 
 
 class TG:

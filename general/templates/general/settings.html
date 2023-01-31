@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block body %}
+<div>
+    <div class="row">
+        <div class="col-md-3 mt-5">
+            <div class="list-group">
+                <label class="form-check-label" for="token">token</label>
+                <input class="form-control" type="text" placeholder="token" aria-label="your token" id="token"
+                       value="{{ token }}">
+                <label class="form-check-label mt-1" for="chat_id">chat id</label>
+                <input class="form-control" type="number" placeholder="chat id" aria-label="your chat id" id="chat_id"
+                       value="{{ chat_id }}">
+                <label class="form-check-label mt-1" for="chunk_size">chunk size</label>
+                <input class="form-control" type="number" placeholder="chunk size" aria-label="chunk size" id="chunk_size"
+                       value="{{ chunk_size }}">
+                <div class="form-check form-switch form-check-reverse mt-2">
+                    <input class="form-check-input" type="checkbox" id="cycle_checkbox" {% if cycle %}checked{% endif %}>
+                    <label class="form-check-label" for="cycle_checkbox">cycle</label>
+                </div>
+                <div class="form-check form-switch form-check-reverse mt-2">
+                    <input class="form-check-input" type="checkbox" id="proxy_checkbox" {% if dont_use_proxy %}checked{% endif %}>
+                    <label class="form-check-label" for="proxy_checkbox">don't use proxy</label>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-7 offset-md-0 ">
+            <textarea class="form-control wrapper" id="links">{{ links }}</textarea>
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <a class="btn btn-primary" type="button" id="btn_back" href="{% url 'home' %}">Back</a>
+                <button class="btn btn-primary" type="button" id="btn_save">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+{% endblock %}
