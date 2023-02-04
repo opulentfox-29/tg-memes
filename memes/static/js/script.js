@@ -33,7 +33,7 @@ try {
             </div>
             <div class="card-body">
                 <p class="card-text">
-                    ${data['text']}
+                    ${data['text'].replaceAll('\n', '<br>')}
                 </p>
             </div>
         </div>
