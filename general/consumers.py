@@ -31,8 +31,8 @@ class WebConsumer(SyncConsumer):
             settings.token = settings_data['token']
             settings.chat_id = settings_data['chat_id']
             settings.chunk_size = settings_data['chunk_size']
+            settings.cycle = settings_data['cycle']
             settings.dont_use_proxy = settings_data['dont_use_proxy']
-            settings.token = settings_data['token']
             settings.save()
             [i.delete() for i in Links.objects.all()]
             links = settings_data['links'].split('\n')
