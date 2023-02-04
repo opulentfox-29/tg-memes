@@ -70,14 +70,14 @@ class WebConsumer(SyncConsumer):
 
                 tg = telegram.TG(settings.token, settings.chat_id, vk)
 
-                photos = []
+                medias = []
                 for i in vk.media_bytes_dict:
-                    if vk.media_bytes_dict[i]['type'] == 'photo':
-                        photos.append(str(base64.b64encode(i)))
+                    media_type = vk.media_bytes_dict[i]['type']
+                    medias.append({'type': media_type, 'base64': str(base64.b64encode(i))})
 
                 data = {
                     'text': vk.post_text,
-                    'photos': photos,
+                    'medias': medias,
                 }
                 data_json = json.dumps(data)
 

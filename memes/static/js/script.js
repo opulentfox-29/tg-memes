@@ -15,28 +15,42 @@ socket.onmessage = function(event) {
 try {
     function new_post (data) {
         var scroll = document.getElementById('scroll');
+        console.log(data['text']);
 
         let code = `
                 <div class="card">
             <div class="well text-center">
                 <div class="row">
                 `
-                for (var photo in data['photos']) { console.log(photo); code += `
-                   <div class="col-md-6">
-                        <img src="data:image/png;base64, ${data['photos'][photo].slice(2, -1)}"
-                        alt="inn_logo" class="img-fluid">
-                    </div>
-                    `
-                   }
-                   code += `
-                </div>
-            </div>
-            <div class="card-body">
-                <p class="card-text">
-                    ${data['text'].replaceAll('\n', '<br>')}
-                </p>
-            </div>
-        </div>
+                for (var media of data['medias']) {
+                    console.log(media);
+                    if (media['type'] === 'photo') {
+                        code += `
+                           <div class="col-md-6">
+                               <img src="data:image/png;base64, ${media['base64'].slice(2, -1)}"
+                               alt="inn_logo" class="img-fluid">
+                            </div>
+                        `
+                    } else {
+                        code += `
+                           <div class="col-md-6">
+                               <video controls class="img-fluid">
+                                   <source src="data:video/mp4;base64, ${media['base64'].slice(2, -1)}"
+                                   type="video/mp4">
+                               </video>
+                           </div>
+                        `
+                    }
+                }
+               code += `
+                   </div>
+               </div>
+               <div class="card-body">
+                   <p class="card-text">
+                       ${data['text'].replaceAll('\n', '<br>')}
+                   </p>
+               </div>
+           </div>
         `
         scroll.innerHTML = code + scroll.innerHTML
     }
