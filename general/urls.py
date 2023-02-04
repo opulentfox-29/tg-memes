@@ -1,9 +1,9 @@
 from django.contrib import admin
 from django.urls import path, include
 
-from .views import index, settings
+from .views import Index, SettingsPage
 
 urlpatterns = [
-    path('', index, name='home'),
-    path('settings/', settings, name='settings'),
+    path('', Index.as_view(), name='home'),
+    path('settings/', SettingsPage.as_view(), name='settings'),
 ]
