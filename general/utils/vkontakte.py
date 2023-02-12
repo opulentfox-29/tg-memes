@@ -57,7 +57,7 @@ class Vk:
             photos += photo
         wall_id = None
         if photos:
-            wall_id = item.find('a', class_='post_link').get('href').split('/')[1]
+            wall_id = item.find('a', class_='PostHeaderSubtitle__link').get('href').split('/')[1]
 
         gifs = item_content.find_all('a', {'class': 'page_doc_photo_href'})
         videos_collection = item_content.find_all('a', class_="MediaGrid__interactive")
