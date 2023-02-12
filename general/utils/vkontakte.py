@@ -48,7 +48,7 @@ class Vk:
     def item_parse(self, item: BeautifulSoup) -> tuple[str, list[str, ...]] or None:
         """Возвращает данные из поста (текст поста, ссылки на медиа)."""
 
-        self.link_post = 'https://vk.com' + item.find('a', class_='post_link').get('href')
+        self.link_post = 'https://vk.com' + item.find('a', class_='PostHeaderSubtitle__link').get('href')
         item_content = item.find("div", class_="wall_text")
 
         photos = item_content.find_all('div', class_='MediaGrid__interactive')
