@@ -98,9 +98,10 @@ class Vk:
         else:
             fixed = item.parent.find('div', class_='post_fixed')
         ads = item.find('div', class_='wall_marked_as_ads')
+        ads2 = item.find('span', class_='PostHeaderSubtitle__item')
         source = item.find('a', class_='Post__copyrightLink')
 
-        if any([fixed, ads, source]):
+        if any([fixed, ads, ads2, source]):
             return True
         return False
 
