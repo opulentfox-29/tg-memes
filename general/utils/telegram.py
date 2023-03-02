@@ -41,7 +41,7 @@ class TG:
                 elif 'Entity Too Large' in err:
                     self._err413_media_too_large()
                     break
-                elif 'MEDIA_CAPTION_TOO_LONG' in err:
+                elif 'message caption is too long' in err:
                     self._err_caption_too_long()
                     text = f"[TG ERROR] СЛИШКОМ МНОГО ТЕКСТА\n" + text + f"\n\n{self.link_post}"
                     break
@@ -117,5 +117,5 @@ class TG:
         log.warning(f"[TG SEND] Слишком большая медиа.")
         
     def _err_caption_too_long(self) -> None:
-        """Error code: 400. Description: Bad Request: MEDIA_CAPTION_TOO_LONG"""
+        """Error code: 400. Description: Bad Request: message caption is too long"""
         log.warning(f"[TG SEND] Слишком много текста.")
