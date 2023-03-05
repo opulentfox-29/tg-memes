@@ -1,8 +1,7 @@
 import requests
-import subprocess
 
 
-def extractor_url(url: str) -> tuple[str, str] or None:
+def extractor_url(url: str) -> tuple[str, str, str, str] or None:
     """Из ссылки на пост с видео, делает прямую ссылку на скачивание видео."""
     video_part_url = url.split('video')[1]
     video_id = video_part_url.split('?list=')[0]
@@ -42,16 +41,10 @@ def extractor_url(url: str) -> tuple[str, str] or None:
 
     url_video = tuple(filter(bool, map(lambda x: json_answer.get(x), qualities)))[0]
 
+    manifest = json_answer.get('manifest')
+    width = manifest.split('width="')[-1].split('"')[0]
+    height = manifest.split('height="')[-1].split('"')[0]
+
     duration = json_answer.get('duration')
 
-    return url_video, duration
-
-
-def extractor_info() -> tuple[str, str]:
-    """Извлекает ширину, высоту видео."""
-    result = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v:0', '-show_entries',
-                             'stream=height,width', '-of', 'csv=s=x:p=0', 'temp_vid.mp4'],
-                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-
-    width, height = str(result.stdout).split("b'")[1].split("\\r")[0].split('x')
-    return width, height
+    return url_video, duration, width, height

@@ -1,10 +1,9 @@
-import os
 import requests
 from bs4 import BeautifulSoup
 
 from . import logger as log
 from . import exceptions
-from .extractors import extractor_url, extractor_info
+from .extractors import extractor_url
 
 headers = {
     'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
@@ -189,13 +188,12 @@ class Vk:
             video_url = 'https://vk.com' + video.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
             try:
-                extract_url, duration = extractor_url(video_url)
+                extract_url, duration, width, height = extractor_url(video_url)
             except Exception as ex_err:
                 log.error(f"extractor_url - {ex_err}")
                 continue
-            download_data = self._download_video(extract_url)
-            if download_data:
-                video_bytes, width, height = download_data
+            video_bytes = self._download_video(extract_url)
+            if video_bytes:
                 media[video_bytes] = {'type': 'video', 'data': {'duration': duration, 'width': width, 'height': height}}
 
         return media
@@ -216,10 +214,7 @@ class Vk:
                     chunks.append(chunk)
                 video_bytes = b''.join(chunks)
                 log.download_video(download_bytes, vid_len, finished=True)
-            with open('temp_vid.mp4', 'wb') as f:
-                f.write(video_bytes)
-            width, height = extractor_info()
-            return video_bytes, width, height
+            return video_bytes
 
         except exceptions.TooLargeVideo as ex:
             log.warning(ex.text)
@@ -238,6 +233,3 @@ class Vk:
         except Exception as ex:
             self.err_text = f"{self.err_text}{ex}\n"
             log.error(f"FAILED DOWNLOAD VIDEO {ex}")
-        finally:
-            if os.path.isfile(f"temp_vid.mp4"):
-                os.remove("temp_vid.mp4")
