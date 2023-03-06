@@ -1,11 +1,21 @@
+import os
 import sqlite3
+import psycopg2
 
 
 class DataBase:
-    def __init__(self, db_name):
+    def __init__(self, db_name=None):
         self.db_name = db_name
         self.db = []
-        self.conn = sqlite3.connect('db.sqlite3')
+        if os.environ.get('db') == 'postgresql':
+            self.conn = psycopg2.connect(
+                host=os.environ.get('db_host', '127.0.0.1'),
+                user=os.environ.get('db_user', 'postgres'),
+                password=os.environ.get('db_password', 'postgres'),
+                database=os.environ.get('db_name', 'postgres')
+            )
+        else:
+            self.conn = sqlite3.connect('db.sqlite3')
         self.cur = self.conn.cursor()
 
     def get_urls(self):

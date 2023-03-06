@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-7pd8y)1ynrzlgb5*w0i0+kd!fdt94kd83e2y#y^ri2w)bw@^8$
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -78,8 +78,11 @@ ASGI_APPLICATION = 'memes.asgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.' + os.environ.get('db', 'sqlite3'),
+        'NAME': os.environ.get('db_name', BASE_DIR / 'db.sqlite3'),
+        'USER': os.environ.get('db_user', ''),
+        'PASSWORD': os.environ.get('db_password', ''),
+        'HOST': os.environ.get('db_host', '')
     }
 }
 
