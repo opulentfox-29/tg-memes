@@ -1,0 +1,37 @@
+version: "3.8"
+
+services:
+ db:
+  image: postgres:15.2-alpine
+  container_name: db
+  volumes:
+   - postgres_data:/var/lib/postgresql/data/
+  ports:
+   - 5432:5432
+  environment:
+   - POSTGRES_USER=postgres
+   - POSTGRES_PASSWORD=postgres
+  healthcheck:
+   test: pg_isready -U postgres
+   interval: 1s
+   timeout: 3s
+   retries: 10
+ 
+ memes:
+  container_name: tg-memes
+  build: .
+  command: sh -c "python manage.py migrate && python manage.py runserver --console"
+  ports:
+   - 127.0.0.1:8000:8000
+  depends_on:
+   db:
+    condition: service_healthy
+  environment:
+   - db=postgresql
+   - db_name=postgres
+   - db_user=postgres
+   - db_password=postgres
+   - db_host=db
+
+volumes:
+  postgres_data:
