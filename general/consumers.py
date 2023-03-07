@@ -1,6 +1,7 @@
 import json
 import base64
 
+from django.core.cache import cache
 from channels.consumer import SyncConsumer
 
 from .models import Settings, Links, Posts
@@ -10,11 +11,21 @@ from .utils import vkontakte, telegram
 class WebConsumer(SyncConsumer):
 
     def websocket_connect(self, event):
-        print('connect')
         self.send({"type": "websocket.accept"})
 
+        posts = cache.get('posts')
+        posts = {
+            'cache': bool(posts),
+            'posts': posts
+        }
+        posts_json = json.dumps(posts)
+
+        self.send({
+            "type": "websocket.send",
+            "text": str(posts_json)
+        })
+
     def websocket_receive(self, event):
-        print('receive')
         receive_data = json.loads(event['text'])
 
         if receive_data['status'] == 'start':
@@ -34,12 +45,13 @@ class WebConsumer(SyncConsumer):
             settings.cycle = settings_data['cycle']
             settings.dont_use_proxy = settings_data['dont_use_proxy']
             settings.save()
+            cache.delete('settings_data')
             [i.delete() for i in Links.objects.all()]
             links = settings_data['links'].split('\n')
             [Links.objects.create(link=i) for i in links]
 
     def websocket_disconnect(self, event):
-        print('disconnect')
+        pass
 
     def _bot(self, settings):
         urls = list(Links.objects.all())
@@ -85,6 +97,19 @@ class WebConsumer(SyncConsumer):
                     "type": "websocket.send",
                     "text": str(data_json)
                 })
+
+                cache_posts = cache.get('posts', [])[-10:]
+                cache_posts.append(data)
+                tries_cache = True
+                while tries_cache:
+                    try:
+                        cache.set('posts', cache_posts)
+                        tries_cache = False
+                    except Exception as ex:
+                        if not cache_posts:
+                            cache.set('posts', [])
+                            break
+                        cache_posts = cache_posts[1:]
 
                 tg.send_post()
 

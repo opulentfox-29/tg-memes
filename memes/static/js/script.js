@@ -1,21 +1,26 @@
+url = window.location.href.split('/').slice(3, -1)[0]
 const socket = new WebSocket('ws://127.0.0.1:8000/ws');
+
 
 socket.onmessage = function(event) {
   try {
     data = JSON.parse(event.data);
-    console.log(data);
 
-    new_post(data);
-
+    if (!url && data['cache']) {
+        for (let post of data['posts']) {
+            new_post(post);
+        }
+    } else {
+        new_post(data);
+    }
   } catch (e) {
-    console.log('Error:', e.message);
+    console.error('Error:', e.message);
   }
 };
 
 try {
     function new_post (data) {
         var scroll = document.getElementById('scroll');
-        console.log(data['text']);
 
         let code = `
                 <div class="card">
@@ -23,7 +28,6 @@ try {
                 <div class="row">
                 `
                 for (var media of data['medias']) {
-                    console.log(media);
                     if (media['type'] === 'photo') {
                         code += `
                            <div class="col-md-6">

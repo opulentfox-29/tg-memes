@@ -17,13 +17,26 @@ services:
    timeout: 3s
    retries: 10
  
+ cache:
+  image: redis:7-alpine
+  container_name: cache
+  ports:
+   - 6379:6379
+  healthcheck:
+   test: redis-cli
+   interval: 1s
+   timeout: 3s
+   retries: 10
+ 
  memes:
   container_name: tg-memes
   build: .
-  command: sh -c "python manage.py migrate && python manage.py runserver --console"
+  command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
   ports:
    - 127.0.0.1:8000:8000
   depends_on:
+   cache:
+    condition: service_healthy
    db:
     condition: service_healthy
   environment:
@@ -32,6 +45,8 @@ services:
    - db_user=postgres
    - db_password=postgres
    - db_host=db
+   - cache_db=redis.RedisCache
+   - cache_location=redis://cache
 
 volumes:
   postgres_data:
