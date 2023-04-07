@@ -42,9 +42,11 @@ def extractor_url(url: str) -> tuple[str, str, str, str] or tuple[str, str, None
     url_video = tuple(filter(bool, map(lambda x: json_answer.get(x), qualities)))[0]
 
     manifest = json_answer.get('manifest')
-    width = manifest.split('width="')[-1].split('"')[0]
-    height = manifest.split('height="')[-1].split('"')[0]
-
+    if manifest:
+        width = manifest.split('width="')[-1].split('"')[0]
+        height = manifest.split('height="')[-1].split('"')[0]
+    else:
+        width = height = 0
     duration = json_answer.get('duration')
 
     return url_video, duration, width, height
