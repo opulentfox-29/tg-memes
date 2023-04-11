@@ -1,7 +1,7 @@
 import time
 
 import telebot
-from telebot.types import InputMediaPhoto, InputMediaVideo, InputMediaDocument
+from telebot.types import InputMediaPhoto, InputMediaVideo
 
 from . import logger as log
 
@@ -14,7 +14,23 @@ class TG:
         self.link_post = vk.link_post
         self.media_bytes_dict = vk.media_bytes_dict
         self.err_text = vk.err_text
-    
+
+        if self.media_bytes_dict and len(self.text) > 1024:
+            self._more_1024_with_media()
+            author = self.text.split('\n')[-1]
+            err1 = f"[TG SEND] Более 1024 символа в посте с медия.\n"
+            err2 = f"\n...\n\n{author}\n{self.link_post}"
+            max_length = len(err1) + len(err2)
+            self.text = err1 + self.text[:1024-max_length] + err2
+
+        elif len(self.text) > 4096:
+            self._more_4096_in_post()
+            author = self.text.split('\n')[-1]
+            err1 = f"[TG SEND] Более 4096 символа в посте.\n"
+            err2 = f"\n...\n\n{author}\n{self.link_post}"
+            max_length = len(err1) + len(err2)
+            self.text = err1 + self.text[:4096-max_length] + err2
+
     def send_post(self) -> None:
         """Отправка поста в тг."""
         text = self.text
@@ -38,14 +54,9 @@ class TG:
                 err = str(err)
                 if 'Error code: 429' in err:
                     self._err429_retry_after(err)
-                elif 'Entity Too Large' in err:
-                    self._err413_media_too_large()
-                    break
-                elif 'message caption is too long' in err:
-                    self._err_caption_too_long()
-                    text = f"[TG ERROR] СЛИШКОМ МНОГО ТЕКСТА\n" + text + f"\n\n{self.link_post}"
-                    break
                 else:
+                    if err in text:
+                        continue
                     log.error("[TG ERROR SEND] " + str(err))
                     text = f"FAILED SEND POST ({err})\n" + text + f"\n\n{self.link_post}"
                     time.sleep(3)
@@ -87,7 +98,7 @@ class TG:
         """Добавление гифки к медиа группе."""
         if not first_media:
             text = None
-        media_group.append(InputMediaDocument(gif, caption=text))
+        media_group.append(InputMediaVideo(gif, caption=text))
 
     def _append_media_video(self, media_group: list[telebot, ...], video_file: bin,
                             first_media: bool, text: str, extract_info) -> None:
@@ -111,11 +122,11 @@ class TG:
         retry_after = int(str(err).split()[-1])
         log.warning(f"[TG SEND] Слишком много запросов. Подождите {retry_after} секунд(ы).")
         time.sleep(retry_after)
-        
-    def _err413_media_too_large(self) -> None:
-        """Error code: 413. Description: Request Entity Too Large"""
-        log.warning(f"[TG SEND] Слишком большая медиа.")
-        
-    def _err_caption_too_long(self) -> None:
+
+    def _more_1024_with_media(self) -> None:
         """Error code: 400. Description: Bad Request: message caption is too long"""
-        log.warning(f"[TG SEND] Слишком много текста.")
+        log.warning(f"[TG SEND] Более 1024 символа в посте с медия.")
+
+    def _more_4096_in_post(self) -> None:
+        """Error code: 400. Description: Bad Request: message is too long"""
+        log.warning(f"[TG SEND] Более 4096 символа в посте.")
