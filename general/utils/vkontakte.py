@@ -58,6 +58,9 @@ class Vk:
         if photos:
             wall_id = item.find('a', class_='PostHeaderSubtitle__link').get('href').split('/')[1]
 
+        ui_gallery = item_content.find_all('img', class_='PhotoPrimaryAttachment__imageElement')
+        ui_gallery = [i.get('src') for i in ui_gallery]
+
         gifs = item_content.find_all('a', {'class': 'page_doc_photo_href'})
         videos_collection = item_content.find_all('a', class_="MediaGrid__interactive")
         one_video = item_content.find('div', class_="page_post_video_play_inline")
@@ -85,7 +88,7 @@ class Vk:
 
         self.post_text = post_text
 
-        self.media_bytes_dict = self._create_media_bytes_dict(wall_id, gifs, videos_collection)
+        self.media_bytes_dict = self._create_media_bytes_dict(wall_id, gifs, videos_collection, ui_gallery)
 
         return self.post_text, self.media_bytes_dict
 
@@ -110,18 +113,28 @@ class Vk:
         text_bs4 = item_content.find('div', class_='wall_post_text')
 
         if text_bs4:
+            text_more = text_bs4.find('button', class_='PostTextMore')
             text_str = str(text_bs4)
+            if text_more:
+                text_more = str(text_more)
+                text_str = text_str.replace(text_more, '')
             emojis = text_bs4.find_all('img', class_='emoji')
             for emoji_bs4 in emojis:
                 emoji = emoji_bs4.get('alt')
                 text_str = text_str.replace(str(emoji_bs4), emoji)
 
+            hrefs = text_bs4.find_all('a')
+            for href in hrefs:
+                text = href.text
+                if text.startswith('https://'):
+                    continue
+                link = href.get('href')
+                text_str = text_str.replace(str(href), f"{text}({link})")
+
             text_str = text_str.replace('<br/>', '\n')
             post_text = BeautifulSoup(text_str, 'html.parser').text
         else:
             post_text = ""
-        if "\nПоказать полностью..." in post_text:
-            post_text = post_text.replace("\nПоказать полностью...", '')
 
         return post_text
 
@@ -144,8 +157,8 @@ class Vk:
         return text
 
     def _create_media_bytes_dict(self, wall_id: str, gifs: list[BeautifulSoup, ...],
-                                 videos_collection: list[BeautifulSoup, ...]) -> dict[bytes,
-                                                                           dict[str, str, str, dict[str, str]], ...]:
+                                 videos_collection: list[BeautifulSoup, ...],
+                                 ui_gallery: list[str, ...]) -> dict[bytes, dict[str, str, str, dict[str, str]], ...]:
         """Создание списка медиа из поста."""
         media = {}
 
@@ -167,11 +180,14 @@ class Vk:
                 photo = requests.get(photo_url).content
                 media[photo] = {'type': 'photo'}
 
+        for link in ui_gallery:
+            photo = requests.get(link).content
+            media[photo] = {'type': 'photo'}
+
         for gif in gifs:
             gif_vk_url = "https://vk.com" + gif.get('href')
-            gif_page = requests.get(gif_vk_url)
-            gif_page = BeautifulSoup(gif_page.text, 'html.parser')
-            gif_url = gif_page.find('img').get('src')
+            gif_page = requests.get(gif_vk_url).text
+            gif_url = gif_page.split('"docUrl":"')[1].split('",')[0].replace('\\', '')
             gif_bin = requests.get(gif_url).content
             media[gif_bin] = {'type': 'gif'}
 
@@ -183,7 +199,7 @@ class Vk:
                 video_restriction = video.find('div', class_='VideoRestriction__title')
                 if video_restriction:
                     log.warning(f"[get video] - {video_restriction.text}")
-                    self.post_text = f"[get video] - Видео только для авторизированных.\n{self.post_text}\n{self.link_post}"
+                    self.post_text = f"[get video] - {video_restriction.text}.\n{self.post_text}\n{self.link_post}"
                     continue
             video_url = 'https://vk.com' + video.get("href")
             video_url = video_url.replace("clip", "video")  # превратить клипы в видео
