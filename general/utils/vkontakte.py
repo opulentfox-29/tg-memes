@@ -46,6 +46,9 @@ class Vk:
 
     def item_parse(self, item: BeautifulSoup) -> tuple[str, list[str, ...]] or None:
         """Возвращает данные из поста (текст поста, ссылки на медиа)."""
+        self.post_text = None
+        self.err_text = ''
+        self.media_bytes_dict = {}
 
         self.link_post = 'https://vk.com' + item.find('a', class_='PostHeaderSubtitle__link').get('href')
         item_content = item.find("div", class_="wall_text")
@@ -77,6 +80,13 @@ class Vk:
         article = item_content.find('a', class_='article_snippet')  # Статья
         if article:
             post_text = self._get_article(article)
+
+        article2 = item_content.find('a', class_='SecondaryAttachment')
+        if article2:
+            post_text, img = self._get_article2(article2)
+            if img:
+                ui_gallery.append(img)
+
 
         voting = item_content.find("div", class_="post_media_voting")  # Голосование
         if voting:
@@ -126,9 +136,11 @@ class Vk:
             hrefs = text_bs4.find_all('a')
             for href in hrefs:
                 text = href.text
-                if text.startswith('https://'):
+                if text.startswith('http'):
                     continue
                 link = href.get('href')
+                if not link.startswith('http'):
+                    link = 'https://vk.com/' + link
                 text_str = text_str.replace(str(href), f"{text}({link})")
 
             text_str = text_str.replace('<br/>', '\n')
@@ -142,8 +154,18 @@ class Vk:
         """Получение статьи."""
         article_href = 'https://vk.com' + article.get('href')
         article_title = article.find('div', class_='article_snippet__title').text
-        text = article_title + "\n\n" + self.author + "\n\n" + article_href
+        text = article_title + "\n\n" + article_href
         return text
+
+    def _get_article2(self, article: any) -> (str, str):
+        """Получение статьи2."""
+        article_href = 'https://vk.com' + article.get('href')
+        article_title = article.find('div', class_='SecondaryAttachment__childrenText').text
+        text = article_title + "\n\n" + article_href
+        article_img = article.find('img', class_='SecondaryAttachmentAvatar__image')
+        if article_img:
+            article_img = article_img.get('src')
+        return text, article_img
 
     def _get_voting(self, item_content: BeautifulSoup, text: str) -> str:
         """Получения голосования."""
