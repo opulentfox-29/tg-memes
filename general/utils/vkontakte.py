@@ -70,33 +70,30 @@ class Vk:
         if one_video:
             videos_collection += [one_video]
 
-        post_text = self._get_text(item_content)
+        self.post_text = self._get_text(item_content)
 
         copy_quote = item_content.find('div', class_='copy_quote')  # Репост
         if copy_quote:
             author_copy = copy_quote.find('a', class_='copy_author').text
-            post_text = f"{post_text}\nРЕПОСТ: {author_copy}\n\n{self._get_text(copy_quote)}"
+            self.post_text = f"{self.post_text}\nРЕПОСТ: {author_copy}\n\n{self._get_text(copy_quote)}"
 
         article = item_content.find('a', class_='article_snippet')  # Статья
         if article:
-            post_text = self._get_article(article)
+            self.post_text = self._get_article(article)
 
         article2 = item_content.find('a', class_='SecondaryAttachment')
         if article2:
-            post_text, img = self._get_article2(article2)
+            self.post_text, img = self._get_article2(article2)
             if img:
                 ui_gallery.append(img)
 
-
         voting = item_content.find("div", class_="post_media_voting")  # Голосование
         if voting:
-            post_text = post_text + self._get_voting(item_content, post_text)
+            self.post_text += self._get_voting(item_content, self.post_text)
 
-        if not post_text:
-            post_text = "."
-        post_text = f"{post_text}\n\n{self.author}"
-
-        self.post_text = post_text
+        if not self.post_text:
+            self.post_text = "."
+        self.post_text = f"{self.post_text}\n\n{self.author}"
 
         self.media_bytes_dict = self._create_media_bytes_dict(wall_id, gifs, videos_collection, ui_gallery)
 
@@ -155,16 +152,22 @@ class Vk:
         article_href = 'https://vk.com' + article.get('href')
         article_title = article.find('div', class_='article_snippet__title').text
         text = article_title + "\n\n" + article_href
+        if self.post_text:
+            text = self.post_text + "\n\n" + text
         return text
 
     def _get_article2(self, article: any) -> (str, str):
         """Получение статьи2."""
-        article_href = 'https://vk.com' + article.get('href')
-        article_title = article.find('div', class_='SecondaryAttachment__childrenText').text
+        article_href = article.get('href')
+        if not article_href.startswith('http'):
+            article_href += 'https://vk.com'
+        article_title = article.find('div', class_='SecondaryAttachment__children').text.strip()
         text = article_title + "\n\n" + article_href
         article_img = article.find('img', class_='SecondaryAttachmentAvatar__image')
         if article_img:
             article_img = article_img.get('src')
+        if self.post_text:
+            text = self.post_text + "\n\n" + text
         return text, article_img
 
     def _get_voting(self, item_content: BeautifulSoup, text: str) -> str:
@@ -175,6 +178,9 @@ class Vk:
         text = text + "\n\nопрос:\n" + voting_title + '\n'
         for i in voting_variants:
             text = f"{text}\n{i.text.split('⋅⋅⋅')[0]}"
+
+        if self.post_text:
+            text = self.post_text + "\n\n" + text
 
         return text
 
