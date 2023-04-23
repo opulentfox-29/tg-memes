@@ -2,12 +2,14 @@ import requests
 from bs4 import BeautifulSoup
 import asyncio
 import aiohttp
+import sys
 
 from . import logger as log
 from . import exceptions
 from .extractors import extractor_url
 
-asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.startswith('win'):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 headers = {
     'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
