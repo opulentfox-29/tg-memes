@@ -1,10 +1,13 @@
 import requests
 from bs4 import BeautifulSoup
+import asyncio
+import aiohttp
 
 from . import logger as log
 from . import exceptions
 from .extractors import extractor_url
 
+asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 headers = {
     'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
@@ -160,7 +163,7 @@ class Vk:
         """Получение статьи2."""
         article_href = article.get('href')
         if not article_href.startswith('http'):
-            article_href += 'https://vk.com'
+            article_href = 'https://vk.com' + article_href
         article_title = article.find('div', class_='SecondaryAttachment__children').text.strip()
         text = article_title + "\n\n" + article_href
         article_img = article.find('img', class_='SecondaryAttachmentAvatar__image')
@@ -189,6 +192,7 @@ class Vk:
                                  ui_gallery: list[str, ...]) -> dict[bytes, dict[str, str, str, dict[str, str]], ...]:
         """Создание списка медиа из поста."""
         media = {}
+        photo_urls = []
 
         if wall_id:
             headers = {
@@ -205,12 +209,13 @@ class Vk:
 
             for photo in photos:
                 photo_url = photo.get('w_src') or photo.get('z_src') or photo.get('y_src') or photo.get('x_src')
-                photo = requests.get(photo_url).content
-                media[photo] = {'type': 'photo'}
+                photo_urls.append(photo_url)
 
-        for link in ui_gallery:
-            photo = requests.get(link).content
-            media[photo] = {'type': 'photo'}
+        photo_urls.extend(ui_gallery)
+        if photo_urls:
+            images = asyncio.run(self.__download_photo(photo_urls))
+            for image in images:
+                media[image] = {'type': 'photo'}
 
         for gif in gifs:
             gif_vk_url = "https://vk.com" + gif.get('href')
@@ -241,6 +246,27 @@ class Vk:
                 media[video_bytes] = {'type': 'video', 'data': {'duration': duration, 'width': width, 'height': height}}
 
         return media
+
+    async def __download_photo(self, photo_urls):
+        async with aiohttp.ClientSession() as session:
+            tasks = []
+            for photo_url in photo_urls:
+                task = asyncio.create_task(self.__coro_download_photo(session, photo_url))
+                tasks.append(task)
+            done, pending = await asyncio.wait(tasks)
+
+        images = []
+        for task in done:
+            images.append(task.result())
+
+        images.sort(key=lambda x: photo_urls.index(x[1]))
+        images = [image[0] for image in images]
+        return images
+
+    async def __coro_download_photo(self, session, url):
+        async with session.get(url) as response:
+            binary = await response.read()
+            return binary, url
 
     def _download_video(self, extract_url: str) -> bytes or None:
         try:
