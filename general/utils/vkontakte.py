@@ -114,7 +114,7 @@ class Vk:
             fixed = item.parent.find('div', class_='post_fixed')
         ads = item.find('div', class_='wall_marked_as_ads')
         ads2 = item.find('span', class_='PostHeaderSubtitle__item')
-        ads3 = item.find('a', class_='PostHeaderSubtitle__item')
+        ads3 = item.find('a', class_='PostHeaderSubtitle__item', attrs={"target": "_blank"})
         source = item.find('a', class_='Post__copyrightLink')
 
         if any([fixed, ads, ads2, ads3, source]):
