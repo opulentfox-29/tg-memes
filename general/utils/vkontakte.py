@@ -12,6 +12,7 @@ if sys.version_info[0] == 3 and sys.version_info[1] >= 8 and sys.platform.starts
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 headers = {
     'accept-language': 'ru,en-US;q=0.9,en;q=0.8,ru-RU;q=0.7',
+    'upgrade-insecure-requests': '1',
     'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
                   '(KHTML, like Gecko) Chrome/104.0.0.0 Safari/537.36'
 }
@@ -266,7 +267,7 @@ class Vk:
         return images
 
     async def __coro_download_photo(self, session, url):
-        async with session.get(url) as response:
+        async with session.get(url, headers=headers) as response:
             binary = await response.read()
             return binary, url
 
